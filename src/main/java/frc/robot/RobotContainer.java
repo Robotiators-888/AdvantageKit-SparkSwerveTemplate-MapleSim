@@ -155,7 +155,7 @@ public class RobotContainer {
         controller.y().onTrue(Commands.runOnce(() -> intake.launchCoralLevel4(), intake));
         controller.a().onTrue(Commands.runOnce(() -> intake.launchCoralLevel3(), intake));
         controller.rightBumper().whileTrue(new CMD_PathfindCloseReefAlign(drive, vision, false));
-        controller.rightBumper().whileTrue(new CMD_PathfindCloseReefAlign(drive, vision, true));
+        controller.leftBumper().whileTrue(new CMD_PathfindCloseReefAlign(drive, vision, true));
         // Reset gyro / odometry
         final Runnable resetGyro = Constants.currentMode == Constants.Mode.SIM
                 ? () -> drive.resetOdometry(
