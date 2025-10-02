@@ -64,7 +64,7 @@ public class IntakeIOSim extends SubsystemBase {
                             // The height at which the coral is ejected
                             Meters.of(1.28),
                             // The initial speed of the coral
-                            MetersPerSecond.of(2),
+                            MetersPerSecond.of(4),
                             // The coral is ejected at a 35-degree slope
                             Degrees.of(-35)));
         }
