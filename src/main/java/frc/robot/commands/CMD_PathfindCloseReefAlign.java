@@ -7,7 +7,6 @@ package frc.robot.commands;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -18,14 +17,13 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.vision.Vision;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-import frc.robot.subsystems.drive.Drive;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
 
 /*
@@ -34,10 +32,10 @@ import org.littletonrobotics.junction.Logger;
  * defining-commands
  */
 public class CMD_PathfindCloseReefAlign extends Command {
-    
+
     Command pathfindingCommand;
     boolean isLeftAlign = false;
-    VisionIOPhotonVisionSim photonVision;
+    Vision photonVision;
     Drive drivetrain;
     Supplier<Integer> targetId;
     Supplier<Integer> pathId;
@@ -49,8 +47,7 @@ public class CMD_PathfindCloseReefAlign extends Command {
 
     public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
     /** Creates a new CMD_PathfindReefAlign. */
-    public CMD_PathfindCloseReefAlign(
-        Drive drivetrain, VisionIOPhotonVisionSim photonVision, boolean isLeftAlign) {
+    public CMD_PathfindCloseReefAlign(Drive drivetrain, Vision photonVision, boolean isLeftAlign) {
         this.photonVision = photonVision;
         this.drivetrain = drivetrain;
         this.isLeftAlign = isLeftAlign;

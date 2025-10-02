@@ -19,20 +19,19 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.CMD_PathfindCloseReefAlign;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.drive.*;
 import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -147,14 +146,16 @@ public class RobotContainer {
         // Switch to X pattern when X button is pressed
         controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
         controller
-                .y()
+                .b()
                 .onTrue(Commands.runOnce(() -> intake.setRunning(true), intake)
                         .andThen(Commands.waitUntil(() -> intake.isCoralInsideIntake()))
                         .andThen(Commands.runOnce(() -> intake.setRunning(false), intake)));
-        controller.b().onTrue(Commands.runOnce(() -> intake.setRunning(false), intake));
+        // controller.b().onTrue(Commands.runOnce(() -> intake.setRunning(false), intake));
 
-        controller.rightBumper().onTrue(Commands.runOnce(() -> intake.launchCoralLevel4(), intake));
-        controller.leftBumper().onTrue(Commands.runOnce(() -> intake.launchCoralLevel3(), intake));
+        controller.y().onTrue(Commands.runOnce(() -> intake.launchCoralLevel4(), intake));
+        controller.a().onTrue(Commands.runOnce(() -> intake.launchCoralLevel3(), intake));
+        controller.rightBumper().whileTrue(new CMD_PathfindCloseReefAlign(drive, vision, false));
+        controller.rightBumper().whileTrue(new CMD_PathfindCloseReefAlign(drive, vision, true));
         // Reset gyro / odometry
         final Runnable resetGyro = Constants.currentMode == Constants.Mode.SIM
                 ? () -> drive.resetOdometry(
@@ -215,5 +216,6 @@ public class RobotContainer {
                 "FieldSimulation/Coral", SimulatedArena.getInstance().getGamePiecesArrayByType("Coral"));
         Logger.recordOutput(
                 "FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
+        Logger.recordOutput("FieldSimulation/HasCoralInIntake", intake.isCoralInsideIntake());
     }
 }

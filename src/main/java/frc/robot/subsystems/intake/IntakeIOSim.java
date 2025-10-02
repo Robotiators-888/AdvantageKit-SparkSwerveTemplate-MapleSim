@@ -17,18 +17,18 @@ public class IntakeIOSim extends SubsystemBase {
     public IntakeIOSim(SwerveDriveSimulation driveTrain) {
         // Here, create the intake simulation with respect to the intake on your real robot
         this.intakeSimulation = IntakeSimulation.OverTheBumperIntake(
-            // Specify the type of game pieces that the intake can collect
-            "Coral",
-            // Specify the drivetrain to which this intake is attached
-            driveTrain,
-            // Width of the intake
-            Meters.of(0.4),
-            // The extension length of the intake beyond the robot's frame (when activated)
-            Meters.of(0.2),
-            // The intake is mounted on the back side of the chassis
-            IntakeSimulation.IntakeSide.BACK,
-            // The intake can hold up to 1 note
-            1);
+                // Specify the type of game pieces that the intake can collect
+                "Coral",
+                // Specify the drivetrain to which this intake is attached
+                driveTrain,
+                // Width of the intake
+                Meters.of(0.4),
+                // The extension length of the intake beyond the robot's frame (when activated)
+                Meters.of(0.2),
+                // The intake is mounted on the back side of the chassis
+                IntakeSimulation.IntakeSide.BACK,
+                // The intake can hold up to 1 note
+                1);
         this.driveTrain = driveTrain;
     }
 
