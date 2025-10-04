@@ -13,18 +13,14 @@
 
 package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static frc.robot.subsystems.drive.DriveConstants.mapleSimConfig;
 
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,7 +31,6 @@ import frc.robot.util.RobotModeTriggers;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.crescendo2024.NoteOnFly;
 
 public class AIRobotInSimulation extends SubsystemBase {
 
@@ -68,8 +63,7 @@ public class AIRobotInSimulation extends SubsystemBase {
         this.id = id;
         this.isOpponent = isOpponent;
         this.queeningPose = ROBOT_QUEENING_POSITIONS[id];
-        this.driveSimulation =
-                new SwerveDriveSimulation(mapleSimConfig, queeningPose);
+        this.driveSimulation = new SwerveDriveSimulation(mapleSimConfig, queeningPose);
         this.intake = new IntakeIOSim(driveSimulation);
 
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
@@ -79,8 +73,7 @@ public class AIRobotInSimulation extends SubsystemBase {
         SendableChooser<Command> behaviorChooser = new SendableChooser<>();
         final Supplier<Command> disable =
                 () -> Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(queeningPose), this)
-                        .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(
-                                new ChassisSpeeds())))
+                        .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(new ChassisSpeeds())))
                         .ignoringDisable(true);
 
         behaviorChooser.setDefaultOption("Disable", disable.get());
