@@ -34,7 +34,6 @@ import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoral;
 import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -172,7 +171,6 @@ public class RobotContainer {
         // Auto-acquire coral when near feeder station in simulation
         if (Constants.currentMode == Constants.Mode.SIM) {
             final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
-            final double CORAL_SPAWN_OFFSET_METERS = -0.3;
 
             new Trigger(() -> {
                 if (intake.isCoralInsideIntake()) {
@@ -190,14 +188,7 @@ public class RobotContainer {
                         robotPosition.getDistance(DriveConstants.redCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS;
                 return atBlueLeft || atBlueRight || atRedLeft || atRedRight;
             }).onTrue(Commands.runOnce(() -> {
-                Pose2d robotPose = drive.getPose();
-                // Calculate spawn position behind the robot
-                Translation2d spawnOffset = new Translation2d(CORAL_SPAWN_OFFSET_METERS, 0.0);
-                Rotation2d robotRotation = robotPose.getRotation();
-                Translation2d spawnPosition = robotPose.getTranslation().plus(spawnOffset.rotateBy(robotRotation));
-
-                // Spawn a coral at the calculated position
-                SimulatedArena.getInstance().addGamePiece(new ReefscapeCoral(spawnPosition));
+                intake.intakeCoralStation();
             }, intake));
         }
 

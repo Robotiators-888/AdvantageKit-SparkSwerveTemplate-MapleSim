@@ -92,4 +92,8 @@ public class IntakeIOSim extends SubsystemBase {
                             Degrees.of(-90)));
         }
     }
+
+    public void intakeCoralStation() {
+        intakeSimulation.addGamePieceToIntake();
+    }
 }
