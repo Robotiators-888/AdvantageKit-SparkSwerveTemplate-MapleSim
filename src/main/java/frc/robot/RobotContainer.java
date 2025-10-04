@@ -141,10 +141,11 @@ public class RobotContainer {
                 drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> -controller.getRightX()));
 
         // Lock to 0° when A button is held
-        controller
-                .leftTrigger()
-                .whileTrue(DriveCommands.joystickDriveAtAngle(
-                        drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> new Rotation2d(2.16)));
+        // controller
+        //         .leftTrigger()
+        //         .whileTrue(DriveCommands.joystickDriveAtAngle(
+        //                 drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> new
+        // Rotation2d(2.16)));
 
         // Switch to X pattern when X button is pressed
         controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
@@ -170,49 +171,86 @@ public class RobotContainer {
 
         // Auto-acquire coral when near feeder station in simulation
         if (Constants.currentMode == Constants.Mode.SIM) {
-                final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
-                final double ANGLE_TOLERANCE_DEGREES = 15.0;
-    
-                new Trigger(() -> {
-                    if (intake.isCoralInsideIntake()) {
-                        return false; // Don't trigger if we already have a coral
-                    }
-                    Pose2d robotPose = drive.getPose();
-                    Translation2d robotPosition = robotPose.getTranslation();
-                    Rotation2d robotRotation = robotPose.getRotation();
-    
-                    boolean atBlueLeft =
-                            robotPosition.getDistance(DriveConstants.blueCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS &&
-                            Math.abs(robotRotation.minus(DriveConstants.blueCoralStationLeftAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
-                    boolean atBlueRight =
-                            robotPosition.getDistance(DriveConstants.blueCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS &&
-                            Math.abs(robotRotation.minus(DriveConstants.blueCoralStationRightAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
-                    boolean atRedLeft =
-                            robotPosition.getDistance(DriveConstants.redCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS &&
-                            Math.abs(robotRotation.minus(DriveConstants.redCoralStationLeftAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
-                    boolean atRedRight =
-                            robotPosition.getDistance(DriveConstants.redCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS &&
-                            Math.abs(robotRotation.minus(DriveConstants.redCoralStationRightAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
-                    Logger.recordOutput("FieldSimulation/RedLeftDistance", robotPosition.getDistance(DriveConstants.redCoralStationLeft));
-                    Logger.recordOutput("FieldSimulation/RedRightDistance", robotPosition.getDistance(DriveConstants.redCoralStationRight));
-                    Logger.recordOutput("FieldSimulation/BlueLeftDistance", robotPosition.getDistance(DriveConstants.blueCoralStationLeft));
-                    Logger.recordOutput("FieldSimulation/BlueRightDistance", robotPosition.getDistance(DriveConstants.blueCoralStationRight));
-            
-                    Logger.recordOutput("FieldSimulation/RedLeftAngleError", Math.abs(robotRotation.minus(DriveConstants.redCoralStationLeftAngle).getDegrees()));
-                    Logger.recordOutput("FieldSimulation/RedRightAngleError", Math.abs(robotRotation.minus(DriveConstants.redCoralStationRightAngle).getDegrees()));
-                    Logger.recordOutput("FieldSimulation/BlueLeftAngleError", Math.abs(robotRotation.minus(DriveConstants.blueCoralStationLeftAngle).getDegrees()));
-                    Logger.recordOutput("FieldSimulation/BlueRightAngleError", Math.abs(robotRotation.minus(DriveConstants.blueCoralStationRightAngle).getDegrees()));
-            
-                    Logger.recordOutput("FieldSimulation/RobotCurrentAngleDegrees", robotRotation.getDegrees());
-            
-                    Logger.recordOutput("FeederStationStatus/AtRedLeft", atRedLeft);
-                    Logger.recordOutput("FeederStationStatus/AtRedRight", atRedRight);
-                    Logger.recordOutput("FeederStationStatus/AtBlueLeft", atBlueLeft);
-                    Logger.recordOutput("FeederStationStatus/AtBlueRight", atBlueRight);
-                                
-                    return atBlueLeft || atBlueRight || atRedLeft || atRedRight;
-                }).onTrue(Commands.runOnce(() -> intake.intakeCoralStation(), intake));
-            }
+            final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
+            final double ANGLE_TOLERANCE_DEGREES = 15.0;
+
+            new Trigger(() -> {
+                        if (intake.isCoralInsideIntake()) {
+                            return false; // Don't trigger if we already have a coral
+                        }
+                        Pose2d robotPose = drive.getPose();
+                        Translation2d robotPosition = robotPose.getTranslation();
+                        Rotation2d robotRotation = robotPose.getRotation();
+
+                        boolean atBlueLeft = robotPosition.getDistance(DriveConstants.blueCoralStationLeft)
+                                        < FEEDER_STATION_PROXIMITY_METERS
+                                && Math.abs(robotRotation
+                                                .minus(DriveConstants.blueCoralStationLeftAngle)
+                                                .getDegrees())
+                                        < ANGLE_TOLERANCE_DEGREES;
+                        boolean atBlueRight = robotPosition.getDistance(DriveConstants.blueCoralStationRight)
+                                        < FEEDER_STATION_PROXIMITY_METERS
+                                && Math.abs(robotRotation
+                                                .minus(DriveConstants.blueCoralStationRightAngle)
+                                                .getDegrees())
+                                        < ANGLE_TOLERANCE_DEGREES;
+                        boolean atRedLeft = robotPosition.getDistance(DriveConstants.redCoralStationLeft)
+                                        < FEEDER_STATION_PROXIMITY_METERS
+                                && Math.abs(robotRotation
+                                                .minus(DriveConstants.redCoralStationLeftAngle)
+                                                .getDegrees())
+                                        < ANGLE_TOLERANCE_DEGREES;
+                        boolean atRedRight = robotPosition.getDistance(DriveConstants.redCoralStationRight)
+                                        < FEEDER_STATION_PROXIMITY_METERS
+                                && Math.abs(robotRotation
+                                                .minus(DriveConstants.redCoralStationRightAngle)
+                                                .getDegrees())
+                                        < ANGLE_TOLERANCE_DEGREES;
+                        Logger.recordOutput(
+                                "FieldSimulation/RedLeftDistance",
+                                robotPosition.getDistance(DriveConstants.redCoralStationLeft));
+                        Logger.recordOutput(
+                                "FieldSimulation/RedRightDistance",
+                                robotPosition.getDistance(DriveConstants.redCoralStationRight));
+                        Logger.recordOutput(
+                                "FieldSimulation/BlueLeftDistance",
+                                robotPosition.getDistance(DriveConstants.blueCoralStationLeft));
+                        Logger.recordOutput(
+                                "FieldSimulation/BlueRightDistance",
+                                robotPosition.getDistance(DriveConstants.blueCoralStationRight));
+
+                        Logger.recordOutput(
+                                "FieldSimulation/RedLeftAngleError",
+                                Math.abs(robotRotation
+                                        .minus(DriveConstants.redCoralStationLeftAngle)
+                                        .getDegrees()));
+                        Logger.recordOutput(
+                                "FieldSimulation/RedRightAngleError",
+                                Math.abs(robotRotation
+                                        .minus(DriveConstants.redCoralStationRightAngle)
+                                        .getDegrees()));
+                        Logger.recordOutput(
+                                "FieldSimulation/BlueLeftAngleError",
+                                Math.abs(robotRotation
+                                        .minus(DriveConstants.blueCoralStationLeftAngle)
+                                        .getDegrees()));
+                        Logger.recordOutput(
+                                "FieldSimulation/BlueRightAngleError",
+                                Math.abs(robotRotation
+                                        .minus(DriveConstants.blueCoralStationRightAngle)
+                                        .getDegrees()));
+
+                        Logger.recordOutput("FieldSimulation/RobotCurrentAngleDegrees", robotRotation.getDegrees());
+
+                        Logger.recordOutput("FeederStationStatus/AtRedLeft", atRedLeft);
+                        Logger.recordOutput("FeederStationStatus/AtRedRight", atRedRight);
+                        Logger.recordOutput("FeederStationStatus/AtBlueLeft", atBlueLeft);
+                        Logger.recordOutput("FeederStationStatus/AtBlueRight", atBlueRight);
+
+                        return atBlueLeft || atBlueRight || atRedLeft || atRedRight;
+                    })
+                    .onTrue(Commands.runOnce(() -> intake.intakeCoralStation(), intake));
+        }
 
         // Example Coral Placement Code
         // TODO: delete these code for your own project
@@ -246,6 +284,10 @@ public class RobotContainer {
      * @return the command to run in autonomous
      */
     public Command getAutonomousCommand() {
+        // PathPlannerAuto auto = SequentialCommandGroup(
+        //         PathPlannerPath.fromPathFile("I Score Path")
+        // )
+
         return autoChooser.get();
     }
 
