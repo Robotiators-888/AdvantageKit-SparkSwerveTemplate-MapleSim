@@ -171,7 +171,6 @@ public class RobotContainer {
         // Auto-acquire coral when near feeder station in simulation
         if (Constants.currentMode == Constants.Mode.SIM) {
             final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
-            final double CORAL_SPAWN_OFFSET_METERS = -0.3;
             final double ANGLE_TOLERANCE_DEGREES = 15.0;
 
             new Trigger(() -> {
