@@ -171,6 +171,8 @@ public class RobotContainer {
         // Auto-acquire coral when near feeder station in simulation
         if (Constants.currentMode == Constants.Mode.SIM) {
             final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
+            final double CORAL_SPAWN_OFFSET_METERS = -0.3;
+            final double ANGLE_TOLERANCE_DEGREES = 15.0;
 
             new Trigger(() -> {
                 if (intake.isCoralInsideIntake()) {
@@ -178,18 +180,23 @@ public class RobotContainer {
                 }
                 Pose2d robotPose = drive.getPose();
                 Translation2d robotPosition = robotPose.getTranslation();
+                Rotation2d robotRotation = robotPose.getRotation();
+
                 boolean atBlueLeft =
-                        robotPosition.getDistance(DriveConstants.blueCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS;
+                        robotPosition.getDistance(DriveConstants.blueCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS &&
+                        Math.abs(robotRotation.minus(DriveConstants.blueCoralStationLeftAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
                 boolean atBlueRight =
-                        robotPosition.getDistance(DriveConstants.blueCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS;
+                        robotPosition.getDistance(DriveConstants.blueCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS &&
+                        Math.abs(robotRotation.minus(DriveConstants.blueCoralStationRightAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
                 boolean atRedLeft =
-                        robotPosition.getDistance(DriveConstants.redCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS;
+                        robotPosition.getDistance(DriveConstants.redCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS &&
+                        Math.abs(robotRotation.minus(DriveConstants.redCoralStationLeftAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
                 boolean atRedRight =
-                        robotPosition.getDistance(DriveConstants.redCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS;
+                        robotPosition.getDistance(DriveConstants.redCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS &&
+                        Math.abs(robotRotation.minus(DriveConstants.redCoralStationRightAngle).getDegrees()) < ANGLE_TOLERANCE_DEGREES;
+
                 return atBlueLeft || atBlueRight || atRedLeft || atRedRight;
-            }).onTrue(Commands.runOnce(() -> {
-                intake.intakeCoralStation();
-            }, intake));
+            }).onTrue(Commands.runOnce(() -> intake.intakeCoralStation(), intake));
         }
 
         // Example Coral Placement Code

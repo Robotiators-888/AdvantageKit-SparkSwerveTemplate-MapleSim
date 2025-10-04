@@ -33,10 +33,16 @@ public class DriveConstants {
     public static final double driveBaseRadius = Math.hypot(trackWidth / 2.0, wheelBase / 2.0);
 
     // Coral Station locations (in meters)
-    public static final Translation2d blueCoralStationLeft = new Translation2d(0.8613, 7.4143);
-    public static final Translation2d blueCoralStationRight = new Translation2d(0.8613, 0.6281);
-    public static final Translation2d redCoralStationLeft = new Translation2d(16.6873, 7.4143);
-    public static final Translation2d redCoralStationRight = new Translation2d(16.6873, 0.6281);
+    public static final Translation2d blueCoralStationLeft = new Translation2d(0.8613, 7.4143); // Tag 13
+    public static final Translation2d blueCoralStationRight = new Translation2d(0.8613, 0.6281); // Tag 12
+    public static final Translation2d redCoralStationLeft = new Translation2d(16.6873, 7.4143); // Tag 2
+    public static final Translation2d redCoralStationRight = new Translation2d(16.6873, 0.6281); // Tag 1
+
+    // Coral Station orientations (robot heading to be facing away from the station)
+    public static final Rotation2d blueCoralStationLeftAngle = Rotation2d.fromDegrees(126.0); // 306 - 180
+    public static final Rotation2d blueCoralStationRightAngle = Rotation2d.fromDegrees(234.0); // 54 + 180
+    public static final Rotation2d redCoralStationLeftAngle = Rotation2d.fromDegrees(54.0); // 234 - 180
+    public static final Rotation2d redCoralStationRightAngle = Rotation2d.fromDegrees(306.0); // 126 + 180
 
     public static final Translation2d[] moduleTranslations = new Translation2d[] {
         new Translation2d(trackWidth / 2.0, wheelBase / 2.0),
