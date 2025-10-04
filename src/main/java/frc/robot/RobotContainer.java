@@ -25,6 +25,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.CMD_PathfindCloseReefAlign;
 import frc.robot.commands.DriveCommands;
@@ -33,6 +34,7 @@ import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoral;
 import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -166,6 +168,38 @@ public class RobotContainer {
                 : () -> drive.resetOdometry(
                         new Pose2d(drive.getPose().getTranslation(), new Rotation2d())); // zero gyro
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
+
+        // Auto-acquire coral when near feeder station in simulation
+        if (Constants.currentMode == Constants.Mode.SIM) {
+            final double FEEDER_STATION_PROXIMITY_METERS = 0.75;
+            final double CORAL_SPAWN_OFFSET_METERS = -0.3;
+
+            new Trigger(() -> {
+                if (intake.isCoralInsideIntake()) {
+                    return false; // Don't trigger if we already have a coral
+                }
+                Pose2d robotPose = drive.getPose();
+                Translation2d robotPosition = robotPose.getTranslation();
+                boolean atBlueLeft =
+                        robotPosition.getDistance(DriveConstants.blueCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS;
+                boolean atBlueRight =
+                        robotPosition.getDistance(DriveConstants.blueCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS;
+                boolean atRedLeft =
+                        robotPosition.getDistance(DriveConstants.redCoralStationLeft) < FEEDER_STATION_PROXIMITY_METERS;
+                boolean atRedRight =
+                        robotPosition.getDistance(DriveConstants.redCoralStationRight) < FEEDER_STATION_PROXIMITY_METERS;
+                return atBlueLeft || atBlueRight || atRedLeft || atRedRight;
+            }).onTrue(Commands.runOnce(() -> {
+                Pose2d robotPose = drive.getPose();
+                // Calculate spawn position behind the robot
+                Translation2d spawnOffset = new Translation2d(CORAL_SPAWN_OFFSET_METERS, 0.0);
+                Rotation2d robotRotation = robotPose.getRotation();
+                Translation2d spawnPosition = robotPose.getTranslation().plus(spawnOffset.rotateBy(robotRotation));
+
+                // Spawn a coral at the calculated position
+                SimulatedArena.getInstance().addGamePiece(new ReefscapeCoral(spawnPosition));
+            }, intake));
+        }
 
         // Example Coral Placement Code
         // TODO: delete these code for your own project
