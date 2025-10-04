@@ -15,25 +15,35 @@ package frc.robot.subsystems;
 
 import static frc.robot.subsystems.drive.DriveConstants.mapleSimConfig;
 
+import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.commands.CMD_PathfindCloseReefAlign;
 import frc.robot.subsystems.intake.IntakeIOSim;
+import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.RobotModeTriggers;
+
+import java.util.Random;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 
 public class AIRobotInSimulation extends SubsystemBase {
-
+    private static final Random random = new Random();
     public static final Pose2d[] ROBOT_QUEENING_POSITIONS = new Pose2d[] {
         new Pose2d(-6, 0, new Rotation2d()),
         new Pose2d(-5, 0, new Rotation2d()),
@@ -96,7 +106,17 @@ public class AIRobotInSimulation extends SubsystemBase {
 
     public static void startOpponentRobotSimulations() {
         try {
-
+            PathConstraints constraints =
+                new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
+            PathPlannerPath leftFeederStation = PathPlannerPath.fromPathFile("Left Feeder Station");
+            PathPlannerPath rightFeederStation = PathPlannerPath.fromPathFile("Right Feeder Station");
+            int index = 0;
+            Command botCommand = new SequentialCommandGroup(
+                    AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> instances[index].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(),
+                    new CMD_PathfindCloseReefAlign(instances[index].driveSimulation,new Vision(), true)
+                );
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false);
             instances[0].buildBehaviorChooser(Commands.none());
