@@ -17,8 +17,8 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static frc.robot.subsystems.drive.DriveConstants.mapleSimConfig;
 
+import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.util.PIDConstants;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -30,14 +30,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.util.FieldMirroringUtils;
 import frc.robot.util.RobotModeTriggers;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.drivesims.SimplifiedSwerveDriveSimulation;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.reefscape2025.NoteOnFly;
-import org.ironmaple.simulation.sensors.SimulatedProjectile.Projectile;
+import org.ironmaple.simulation.seasonspecific.crescendo2024.NoteOnFly;
 
 public class AIRobotInSimulation extends SubsystemBase {
 
@@ -57,10 +56,10 @@ public class AIRobotInSimulation extends SubsystemBase {
         new Pose2d(1.6, 4, new Rotation2d())
     };
 
-    private final SimplifiedSwerveDriveSimulation driveSimulation;
+    private final SwerveDriveSimulation driveSimulation;
     private final Pose2d queeningPose;
     private final int id;
-
+    private final IntakeIOSim intake;
     private final PPHolonomicDriveController driveController =
             new PPHolonomicDriveController(new PIDConstants(5.0, 0.02), new PIDConstants(7.0, 0.05));
 
@@ -71,63 +70,22 @@ public class AIRobotInSimulation extends SubsystemBase {
         this.isOpponent = isOpponent;
         this.queeningPose = ROBOT_QUEENING_POSITIONS[id];
         this.driveSimulation =
-                new SimplifiedSwerveDriveSimulation(new SwerveDriveSimulation(mapleSimConfig, queeningPose));
+                new SwerveDriveSimulation(mapleSimConfig, queeningPose);
+        this.intake = new IntakeIOSim(driveSimulation);
 
-        SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation.getDriveTrainSimulation());
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
     }
 
-    private Command joystickDrive(XboxController joystick) {
-        final Supplier<ChassisSpeeds> joystickSpeeds = () -> new ChassisSpeeds(
-                -joystick.getLeftY() * driveSimulation.maxLinearVelocity().in(MetersPerSecond),
-                -joystick.getLeftX() * driveSimulation.maxLinearVelocity().in(MetersPerSecond),
-                -joystick.getRightX() * driveSimulation.maxAngularVelocity().in(RadiansPerSecond));
-
-        final Supplier<Rotation2d> driverStationFacing = isOpponent
-                ? () -> FieldMirroringUtils.getCurrentAllianceDriverStationFacing()
-                        .plus(Rotation2d.fromDegrees(180))
-                : FieldMirroringUtils::getCurrentAllianceDriverStationFacing;
-
-        return Commands.run(
-                        () -> {
-                            final ChassisSpeeds fieldCentricSpeeds =
-                                    ChassisSpeeds.fromRobotRelativeSpeeds(joystickSpeeds.get(), driverStationFacing.get());
-                            driveSimulation.runChassisSpeeds(fieldCentricSpeeds, new Translation2d(), true, true);
-                        },
-                        this)
-                .beforeStarting(() -> driveSimulation.setSimulationWorldPose(
-                        isOpponent
-                                ? FieldMirroringUtils.toCurrentAlliancePose(ROBOTS_STARTING_POSITIONS[id])
-                                : ROBOTS_STARTING_POSITIONS[id]));
-    }
-
-    private Command feedShot() {
-        return Commands.runOnce(() -> SimulatedArena.getInstance()
-                .addGamePieceProjectile(new NoteOnFly(
-                                this.driveSimulation
-                                        .getActualPoseInSimulationWorld()
-                                        .getTranslation(),
-                                new Translation2d(0.3, 0),
-                                this.driveSimulation.getActualSpeedsFieldRelative(),
-                                this.driveSimulation
-                                        .getActualPoseInSimulationWorld()
-                                        .getRotation(),
-                                0.5,
-                                10,
-                                Math.toRadians(45))
-                        .setGamePieceSupplier(Projectile.GamePiece.NOTE_ON_FLY)));
-    }
-
-    public void buildBehaviorChooser(Command autoCycle, XboxController joystick) {
+    public void buildBehaviorChooser(Command autoCycle) {
         SendableChooser<Command> behaviorChooser = new SendableChooser<>();
         final Supplier<Command> disable =
                 () -> Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(queeningPose), this)
-                        .andThen(Commands.runOnce(() -> driveSimulation.runChassisSpeeds(
-                                new ChassisSpeeds(), new Translation2d(), false, false)))
+                        .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(
+                                new ChassisSpeeds())))
                         .ignoringDisable(true);
 
         behaviorChooser.setDefaultOption("Disable", disable.get());
         behaviorChooser.addOption("Auto Cycle", autoCycle);
-        behaviorChooser.addOption("Joystick Drive", joystickDrive(joystick));
         behaviorChooser.onChange((Command::schedule));
         RobotModeTriggers.teleop()
                 .onTrue(Commands.runOnce(() -> behaviorChooser.getSelected().schedule()));
@@ -148,17 +106,17 @@ public class AIRobotInSimulation extends SubsystemBase {
         try {
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false);
-            instances[0].buildBehaviorChooser(Commands.none(), new XboxController(2));
+            instances[0].buildBehaviorChooser(Commands.none());
             instances[1] = new AIRobotInSimulation(4, false);
-            instances[1].buildBehaviorChooser(Commands.none(), new XboxController(3));
+            instances[1].buildBehaviorChooser(Commands.none());
 
             // Opponents
             instances[2] = new AIRobotInSimulation(0, true);
-            instances[2].buildBehaviorChooser(Commands.none(), new XboxController(4));
+            instances[2].buildBehaviorChooser(Commands.none());
             instances[3] = new AIRobotInSimulation(1, true);
-            instances[3].buildBehaviorChooser(Commands.none(), new XboxController(5));
+            instances[3].buildBehaviorChooser(Commands.none());
             instances[4] = new AIRobotInSimulation(2, true);
-            instances[4].buildBehaviorChooser(Commands.none(), new XboxController(6));
+            instances[4].buildBehaviorChooser(Commands.none());
 
         } catch (Exception e) {
             DriverStation.reportError(
