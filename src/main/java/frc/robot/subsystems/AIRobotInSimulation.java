@@ -31,7 +31,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.intake.IntakeIOSim;
-import frc.robot.util.FieldMirroringUtils;
 import frc.robot.util.RobotModeTriggers;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
@@ -104,6 +103,7 @@ public class AIRobotInSimulation extends SubsystemBase {
 
     public static void startOpponentRobotSimulations() {
         try {
+
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false);
             instances[0].buildBehaviorChooser(Commands.none());
