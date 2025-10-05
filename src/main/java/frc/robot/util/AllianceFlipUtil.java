@@ -74,7 +74,7 @@ public class AllianceFlipUtil {
         if (!shouldFlip()) return pose;
         return new Pose2d(apply(pose.getTranslation(), flipType), apply(pose.getRotation(), flipType));
     }
-        
+
     /**
      * Flips a pose to the specified field side.
      *
@@ -84,7 +84,7 @@ public class AllianceFlipUtil {
     public static Pose2d apply(Pose2d pose, boolean isRed) {
         return apply(pose, isRed, defaultFlipType);
     }
-    
+
     /**
      * Flips a pose to the specified field side using a specified flip type.
      *
@@ -94,21 +94,21 @@ public class AllianceFlipUtil {
      */
     public static Pose2d apply(Pose2d pose, boolean isRed, FieldFlipType flipType) {
         if (!isRed) return pose; // The pose is stored as if it's on the Blue side (isRed = false)
-        
+
         // If isRed is true, we flip the pose, regardless of the current DS alliance.
         // This logic is based on the assumption that 'apply' functions flip an
         // *always-blue-side* value to the *desired* side.
-        
+
         // We'll use a local helper to perform the flip logic from blue to red,
         // mirroring the logic of the original 'apply' functions that use shouldFlip().
         return flipPoseToRed(pose, flipType);
     }
-    
+
     /** Helper to perform the Pose2d flip logic from Blue to Red. */
     private static Pose2d flipPoseToRed(Pose2d pose, FieldFlipType flipType) {
         Translation2d newTranslation;
         Rotation2d newRotation;
-        
+
         switch (flipType) {
             default:
             case CenterPointFlip:
@@ -121,13 +121,14 @@ public class AllianceFlipUtil {
                 // Translation flip
                 newTranslation = new Translation2d(fieldLength - pose.getX(), pose.getY());
                 // Rotation flip (mirror across the X-axis of the field center line)
-                newRotation = new Rotation2d(-pose.getRotation().getCos(), pose.getRotation().getSin());
+                newRotation = new Rotation2d(
+                        -pose.getRotation().getCos(), pose.getRotation().getSin());
                 break;
         }
-        
+
         return new Pose2d(newTranslation, newRotation);
     }
-    
+
     // --- End of New Methods ---
 
     public static ChassisSpeeds applyFieldRelative(ChassisSpeeds speeds) {

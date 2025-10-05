@@ -17,7 +17,6 @@ import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -30,6 +29,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.CMD_PathfindCloseReefAlign;
 import frc.robot.commands.DriveCommands;
+import frc.robot.subsystems.AIRobotInSimulation;
 import frc.robot.subsystems.drive.*;
 import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.vision.*;
@@ -99,6 +99,7 @@ public class RobotContainer {
                         new VisionIOPhotonVisionSim(
                                 camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose));
                 intake = new IntakeIOSim(driveSimulation);
+                AIRobotInSimulation.startOpponentRobotSimulations();
                 break;
             default:
                 // Replayed robot, disable IO implementations
@@ -126,10 +127,6 @@ public class RobotContainer {
                 "Drive SysId (Quasistatic Reverse)", drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
         autoChooser.addOption("Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
         autoChooser.addOption("Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-        NamedCommands.registerCommand("RandomPathfind", CMD_PathfindCloseReefAlign.pathfindToRandomPose());
-        NamedCommands.registerCommand(
-                "ReefAlign", new CMD_PathfindCloseReefAlign(drive, vision, true)); // Configure the button bindings
-        configureButtonBindings();
     }
 
     /**
@@ -305,5 +302,7 @@ public class RobotContainer {
         Logger.recordOutput(
                 "FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
         Logger.recordOutput("FieldSimulation/HasCoralInIntake", intake.isCoralInsideIntake());
+        Logger.recordOutput("FieldSimulation/OpponentRobotPositions", AIRobotInSimulation.getOpponentRobotPoses());
+        Logger.recordOutput("FieldSimulation/AlliancePartnerRobotPositions", AIRobotInSimulation.getAlliancePartnerRobotPoses());
     }
 }

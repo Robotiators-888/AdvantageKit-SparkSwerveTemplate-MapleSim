@@ -5,6 +5,7 @@
 package frc.robot.commands;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -15,7 +16,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.drive.Drive;
@@ -206,7 +206,7 @@ public class CMD_PathfindCloseReefAlign extends Command {
 
         // Mirror the pose if on the Red Alliance
 
-        return AllianceFlipUtil.apply(targetPose,alliance.get() == DriverStation.Alliance.Red);
+        return AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Red);
     }
 
     public static Command pathfindToRandomPose(Optional<DriverStation.Alliance> alliance) {
@@ -216,8 +216,8 @@ public class CMD_PathfindCloseReefAlign extends Command {
         return AutoBuilder.pathfindToPose(pose, constraints);
     }
 
-
-    public static Command pathfindingCommand(Pose2d drivePose,boolean isLeftAlign, Optional<DriverStation.Alliance> alliance) {
+    public static Command pathfindingCommand(
+            Pose2d drivePose, boolean isLeftAlign, Optional<DriverStation.Alliance> alliance) {
         List<Integer> targetTagSets;
         Command pathfindingCommand;
         Pose2d tagPose = new Pose2d();
