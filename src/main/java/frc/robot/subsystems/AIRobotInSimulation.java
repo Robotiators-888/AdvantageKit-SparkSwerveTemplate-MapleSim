@@ -37,6 +37,7 @@ import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.RobotModeTriggers;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
@@ -106,30 +107,93 @@ public class AIRobotInSimulation extends SubsystemBase {
 
     public static void startOpponentRobotSimulations() {
         try {
+            Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+            if (alliance.get() == DriverStation.Alliance.Red) {
+                Optional<DriverStation.Alliance> OpAlliance = Optional<DriverStation.Alliance.Blue>;
+            } else {
+                Optional<DriverStation.Alliance> OpAlliance = Optional<DriverStation.Alliance.Red>;
+            }
             PathConstraints constraints =
                 new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
             PathPlannerPath leftFeederStation = PathPlannerPath.fromPathFile("Left Feeder Station");
             PathPlannerPath rightFeederStation = PathPlannerPath.fromPathFile("Right Feeder Station");
-            int index = 0;
             Command botCommand = new SequentialCommandGroup(
                     AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
-                    Commands.runOnce(() -> instances[index].intake.intakeCoralStation()),
-                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(),
-                    new CMD_PathfindCloseReefAlign(instances[index].driveSimulation,new Vision(), true)
+                    Commands.runOnce(() -> instances[0].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(alliance),
+                    CMD_PathfindCloseReefAlign.pathfindingCommand(instances[0].driveSimulation.getSimulatedDriveTrainPose(),random.nextDouble() < 0.5,alliance),
+                    Commands.runOnce(() -> {
+                        if (random.nextDouble() < 0.5) {
+                            instances[0].intake.launchCoralLevel3();
+                        } else {
+                            instances[0].intake.launchCoralLevel4();
+                        }
+                    })
                 );
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false);
-            instances[0].buildBehaviorChooser(Commands.none());
+            instances[0].buildBehaviorChooser(botCommand);
+            botCommand = new SequentialCommandGroup(
+                    AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> instances[1].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(alliance),
+                    CMD_PathfindCloseReefAlign.pathfindingCommand(instances[1].driveSimulation.getSimulatedDriveTrainPose(),random.nextDouble() < 0.5,alliance),
+                    Commands.runOnce(() -> {
+                        if (random.nextDouble() < 0.5) {
+                            instances[1].intake.launchCoralLevel3();
+                        } else {
+                            instances[1].intake.launchCoralLevel4();
+                        }
+                    })
+                );
             instances[1] = new AIRobotInSimulation(4, false);
-            instances[1].buildBehaviorChooser(Commands.none());
-
+            instances[1].buildBehaviorChooser(botCommand);
+            botCommand = new SequentialCommandGroup(
+                    AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> instances[2].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance),
+                    CMD_PathfindCloseReefAlign.pathfindingCommand(instances[2].driveSimulation.getSimulatedDriveTrainPose(),random.nextDouble() < 0.5,OpAlliance),
+                    Commands.runOnce(() -> {
+                        if (random.nextDouble() < 0.5) {
+                            instances[2].intake.launchCoralLevel3();
+                        } else {
+                            instances[2].intake.launchCoralLevel4();
+                        }
+                    })
+                );
             // Opponents
             instances[2] = new AIRobotInSimulation(0, true);
-            instances[2].buildBehaviorChooser(Commands.none());
+            instances[2].buildBehaviorChooser(botCommand);
+            botCommand = new SequentialCommandGroup(
+                    AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> instances[3].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance),
+                    CMD_PathfindCloseReefAlign.pathfindingCommand(instances[3].driveSimulation.getSimulatedDriveTrainPose(),random.nextDouble() < 0.5,OpAlliance),
+                    Commands.runOnce(() -> {
+                        if (random.nextDouble() < 0.5) {
+                            instances[3].intake.launchCoralLevel3();
+                        } else {
+                            instances[3].intake.launchCoralLevel4();
+                        }
+                    })
+                );
             instances[3] = new AIRobotInSimulation(1, true);
-            instances[3].buildBehaviorChooser(Commands.none());
+            instances[3].buildBehaviorChooser(botCommand);
+            botCommand = new SequentialCommandGroup(
+                    AutoBuilder.pathfindThenFollowPath(random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> instances[4].intake.intakeCoralStation()),
+                    CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance),
+                    CMD_PathfindCloseReefAlign.pathfindingCommand(instances[4].driveSimulation.getSimulatedDriveTrainPose(),random.nextDouble() < 0.5,OpAlliance),
+                    Commands.runOnce(() -> {
+                        if (random.nextDouble() < 0.5) {
+                            instances[4].intake.launchCoralLevel3();
+                        } else {
+                            instances[4].intake.launchCoralLevel4();
+                        }
+                    })
+                );
             instances[4] = new AIRobotInSimulation(2, true);
-            instances[4].buildBehaviorChooser(Commands.none());
+            instances[4].buildBehaviorChooser(botCommand);
 
         } catch (Exception e) {
             DriverStation.reportError(
