@@ -5,7 +5,6 @@
 package frc.robot.commands;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -18,6 +17,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.subsystems.AIRobotInSimulation;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.AllianceFlipUtil;
@@ -209,15 +209,22 @@ public class CMD_PathfindCloseReefAlign extends Command {
         return AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Red);
     }
 
-    public static Command pathfindToRandomPose(Optional<DriverStation.Alliance> alliance) {
+    public static Command pathfindToRandomPose(
+            Optional<DriverStation.Alliance> alliance, AIRobotInSimulation instance) {
+
+        Logger.recordOutput("Pathfind Test Out", 0);
         Pose2d pose = generateRandomTargetPose(alliance);
         PathConstraints constraints =
                 new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
-        return AutoBuilder.pathfindToPose(pose, constraints);
+        return instance.PFToPose(pose, constraints);
     }
 
     public static Command pathfindingCommand(
-            Pose2d drivePose, boolean isLeftAlign, Optional<DriverStation.Alliance> alliance) {
+            Pose2d drivePose,
+            boolean isLeftAlign,
+            Optional<DriverStation.Alliance> alliance,
+            AIRobotInSimulation instance) {
+        Logger.recordOutput("Pathfind Test Out", 1);
         List<Integer> targetTagSets;
         Command pathfindingCommand;
         Pose2d tagPose = new Pose2d();
@@ -337,10 +344,10 @@ public class CMD_PathfindCloseReefAlign extends Command {
             String selectedCharacter = characterLists.get(path).get(isLeftAlign ? 0 : 1);
             try {
                 PathPlannerPath paths = PathPlannerPath.fromPathFile(selectedCharacter + " Score Pathfind");
-                pathfindingCommand = AutoBuilder.pathfindThenFollowPath(paths, constraints);
+                pathfindingCommand = instance.PFThenFollowPath(paths, constraints);
             } catch (Exception e) {
                 // System.out.println("Path not found, switching to pathfindToPose. Error: " + e);
-                pathfindingCommand = AutoBuilder.pathfindToPose(pose, constraints);
+                pathfindingCommand = instance.PFToPose(pose, constraints);
             }
             // pathfindingCommand.initialize();
         } else {
