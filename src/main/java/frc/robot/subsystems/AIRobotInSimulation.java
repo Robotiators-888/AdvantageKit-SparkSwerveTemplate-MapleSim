@@ -40,7 +40,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.commands.CMD_PathfindCloseReefAlign;
 import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.RobotModeTriggers;
@@ -85,7 +84,9 @@ public class AIRobotInSimulation extends SubsystemBase {
     private final int id;
     private final IntakeIOSim intake;
     private final PPHolonomicDriveController driveController =
-            new PPHolonomicDriveController(new PIDConstants(1.5,0.02, 0.2), new PIDConstants(0, 0));
+            new PPHolonomicDriveController(new PIDConstants(5, 0), new PIDConstants(15, 0));
+    private final PPHolonomicDriveController pfc =
+            new PPHolonomicDriveController(new PIDConstants(3, 0), new PIDConstants(10, 0));
 
     private final boolean isOpponent;
     private final DriverStation.Alliance alliance;
@@ -102,30 +103,78 @@ public class AIRobotInSimulation extends SubsystemBase {
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
     }
 
+    public Command reCallCommand() {
+        try {
+            PathPlannerPath leftFeederStation = PathPlannerPath.fromPathFile("Left Feeder Station");
+            PathPlannerPath rightFeederStation = PathPlannerPath.fromPathFile("Right Feeder Station");
+            PathConstraints constraints =
+                    new PathConstraints(1.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
+            double random1 = random.nextDouble();
+            double random2 = random.nextDouble();
+            return new SequentialCommandGroup(
+                    this.PFThenFollowPath(
+                            random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+                    Commands.runOnce(() -> this.intake.intakeCoralStation()),
+                    pathfindToRandomPose(Optional.of(DriverStation.Alliance.Blue), this, random1, random2),
+                    pathfindingCommand(
+                            generateRandomTargetPose(Optional.of(DriverStation.Alliance.Blue), random1, random2),
+                            random.nextDouble() < 0.5,
+                            Optional.of(DriverStation.Alliance.Blue),
+                            this),
+                    Commands.runOnce(() -> this.intake.launchCoralLevel4())
+                            .andThen(Commands.waitSeconds(1))
+                            .andThen(this.reCallCommandDefer()));
+        } catch (Exception e) {
+            DriverStation.reportError(
+                    "Failed to load opponent robot simulation paths, error: " + e.getMessage(), false);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Command reCallCommandDefer() {
+        return Commands.deferredProxy(this::reCallCommand);
+    }
+
     public void buildBehaviorChooser(Command autoCycle) {
-        SendableChooser<Command> behaviorChooser = new SendableChooser<>();
-        final Supplier<Command> disable =
-                () -> Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.queeningPose), this)
-                        .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(new ChassisSpeeds())))
-                        .ignoringDisable(true);
+        try {
 
-        behaviorChooser.setDefaultOption("Disable", disable.get());
-        behaviorChooser.addOption(
-                "Auto Cycle",
-                Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.startingPose), this)
-                        .andThen(autoCycle.repeatedly()));
-        behaviorChooser.onChange((Command::schedule));
-        RobotModeTriggers.teleop()
-                .onTrue(Commands.runOnce(() -> behaviorChooser.getSelected().schedule()));
-        RobotModeTriggers.disabled().onTrue(disable.get());
+            SendableChooser<Command> behaviorChooser = new SendableChooser<>();
+            final Supplier<Command> disable =
+                    () -> Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.queeningPose), this)
+                            .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(new ChassisSpeeds())))
+                            .ignoringDisable(true);
+            PathConstraints constraints =
+                    new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
+            behaviorChooser.setDefaultOption("Disable", disable.get());
+            behaviorChooser.addOption(
+                    "Auto Cycle",
+                    Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.startingPose), this)
+                            .andThen(this.reCallCommandDefer().repeatedly()));
+            behaviorChooser.onChange((Command::schedule));
+            RobotModeTriggers.teleop()
+                    .onTrue(Commands.runOnce(() -> behaviorChooser.getSelected().schedule()));
+            RobotModeTriggers.disabled().onTrue(disable.get());
 
-        SmartDashboard.putData(
-                "AIRobotBehaviors/" + (isOpponent ? "Opponent" : "Teammate") + " Robot " + id + " Behavior",
-                behaviorChooser);
+            SmartDashboard.putData(
+                    "AIRobotBehaviors/" + (isOpponent ? "Opponent" : "Teammate") + " Robot " + id + " Behavior",
+                    behaviorChooser);
+        } catch (Exception e) {
+            DriverStation.reportError("Failed to set behavior", true);
+            throw new RuntimeException(e);
+        }
     }
 
     public void runVelocity(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
-        ChassisSpeeds flipped = new ChassisSpeeds(speeds.vxMetersPerSecond,speeds.vyMetersPerSecond,0*speeds.omegaRadiansPerSecond);
+        ChassisSpeeds flipped =
+                new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, 1 * speeds.omegaRadiansPerSecond);
+
+        this.driveSimulation.setRobotSpeeds(ChassisSpeeds.fromRobotRelativeSpeeds(
+                flipped, this.driveSimulation.getSimulatedDriveTrainPose().getRotation()));
+    }
+
+    public void runVelocityFlip(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
+        ChassisSpeeds flipped = new ChassisSpeeds(
+                -speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, 1 * speeds.omegaRadiansPerSecond);
         this.driveSimulation.setRobotSpeeds(flipped);
     }
 
@@ -150,26 +199,26 @@ public class AIRobotInSimulation extends SubsystemBase {
 
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false, alliance.get());
-            Command botCommand = new SequentialCommandGroup(
-                    instances[0].PFThenFollowPath(
-                            random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
-                    Commands.runOnce(() -> instances[0].intake.intakeCoralStation()),
-                    pathfindToRandomPose(alliance, instances[0]),
-                    pathfindingCommand(
-                            instances[0].driveSimulation.getSimulatedDriveTrainPose(),
-                            random.nextDouble() < 0.5,
-                            alliance,
-                            instances[0]),
-                    Commands.runOnce(() -> {
-                        if (random.nextDouble() < 0.5) {
-                            instances[0].intake.launchCoralLevel3();
-                        } else {
-                            instances[0].intake.launchCoralLevel4();
-                        }
-                    }));
-            instances[0].buildBehaviorChooser(botCommand);
+            // Command botCommand = new SequentialCommandGroup(
+            //         instances[0].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[0].intake.intakeCoralStation()),
+            //         pathfindToRandomPose(alliance, instances[0]),
+            //         pathfindingCommand(
+            //                 instances[0].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 alliance,
+            //                 instances[0]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[0].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[0].intake.launchCoralLevel4();
+            //             }
+            //         }));
+            instances[0].buildBehaviorChooser(Commands.none());
 
-            // instances[1] = new AIRobotInSimulation(4, false, alliance.get());
+            instances[1] = new AIRobotInSimulation(4, false, alliance.get());
             // botCommand = new SequentialCommandGroup(
             //         instances[1].PFThenFollowPath(
             //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
@@ -187,7 +236,7 @@ public class AIRobotInSimulation extends SubsystemBase {
             //                 instances[1].intake.launchCoralLevel4();
             //             }
             //         }));
-            // instances[1].buildBehaviorChooser(botCommand);
+            instances[1].buildBehaviorChooser(Commands.none());
 
             // // Opponents
             // instances[2] = new AIRobotInSimulation(0, true, OpAlliance.get());
@@ -258,7 +307,8 @@ public class AIRobotInSimulation extends SubsystemBase {
     }
 
     public boolean isRedAlliance() {
-        return this.isOpponent;
+        // return this.isOpponent;
+        return false;
     }
 
     public static Pose2d[] getOpponentRobotPoses() {
@@ -272,7 +322,7 @@ public class AIRobotInSimulation extends SubsystemBase {
     public static Pose2d[] getAlliancePartnerRobotPoses() {
         return new Pose2d[] {
             instances[0].driveSimulation.getSimulatedDriveTrainPose(),
-            // instances[1].driveSimulation.getSimulatedDriveTrainPose()
+            instances[1].driveSimulation.getSimulatedDriveTrainPose()
         };
     }
 
@@ -283,7 +333,7 @@ public class AIRobotInSimulation extends SubsystemBase {
                 this.driveSimulation::getSimulatedDriveTrainPose,
                 this.driveSimulation::getDriveTrainSimulatedChassisSpeedsRobotRelative,
                 this::runVelocity,
-                new PPHolonomicDriveController(new PIDConstants(0, 0), new PIDConstants(0, 0)), //5,7
+                pfc,
                 new RobotConfig(
                         robotMassKg,
                         robotMOI,
@@ -308,7 +358,7 @@ public class AIRobotInSimulation extends SubsystemBase {
                 this.driveSimulation::getSimulatedDriveTrainPose,
                 this.driveSimulation::getDriveTrainSimulatedChassisSpeedsRobotRelative,
                 this::runVelocity,
-                new PPHolonomicDriveController(new PIDConstants(0,0, 0), new PIDConstants(0, 0)),
+                pfc,
                 new RobotConfig(
                         robotMassKg,
                         robotMOI,
@@ -323,13 +373,14 @@ public class AIRobotInSimulation extends SubsystemBase {
                 this);
     }
 
-    public static Pose2d generateRandomTargetPose(Optional<DriverStation.Alliance> alliance) {
+    public static Pose2d generateRandomTargetPose(
+            Optional<DriverStation.Alliance> alliance, double random1, double random2) {
         double rangeX = MAX_X_BLUE - MIN_X_BLUE;
-        double randomX = MIN_X_BLUE + (rangeX * random.nextDouble());
+        double randomX = MIN_X_BLUE + (rangeX * random1);
 
         // Y range is the full width of the field
         double rangeY = MAX_Y - MIN_Y;
-        double randomY = MIN_Y + (rangeY * random.nextDouble());
+        double randomY = MIN_Y + (rangeY * random2);
 
         // Random Holonomic Rotation (from -180 to 180 degrees)
         double randomDegrees = random.nextDouble() * 360.0 - 180.0;
@@ -338,13 +389,14 @@ public class AIRobotInSimulation extends SubsystemBase {
         Pose2d targetPose = new Pose2d(randomX, randomY, randomRotation);
 
         // Mirror the pose if on the Red Alliance
-        Logger.recordOutput("RandomPoseLoc",AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Blue));
-        return AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Blue);
+        Logger.recordOutput(
+                "RandomPoseLoc", AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Red));
+        return AllianceFlipUtil.apply(targetPose, alliance.get() == DriverStation.Alliance.Red);
     }
 
     public static Command pathfindToRandomPose(
-            Optional<DriverStation.Alliance> alliance, AIRobotInSimulation instance) {
-        Pose2d pose = generateRandomTargetPose(alliance);
+            Optional<DriverStation.Alliance> alliance, AIRobotInSimulation instance, double random1, double random2) {
+        Pose2d pose = generateRandomTargetPose(alliance, random1, random2);
         PathConstraints constraints =
                 new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
         return instance.PFToPose(pose, constraints);
@@ -440,14 +492,19 @@ public class AIRobotInSimulation extends SubsystemBase {
             if (isLeftAlign) {
                 if (alliance.get() == DriverStation.Alliance.Red) {
                     selectedMap = redLeft;
+                    Logger.recordOutput("PathfindSelectedMap", "redLeft");
                 } else {
                     selectedMap = blueLeft;
+                    Logger.recordOutput("PathfindSelectedMap", "blueLeft");
                 }
             } else {
                 if (alliance.get() == DriverStation.Alliance.Red) {
                     selectedMap = redRight;
+                    Logger.recordOutput("PathfindSelectedMap", "redRight");
                 } else {
                     selectedMap = blueRight;
+                    Logger.recordOutput("PathfindPose2d", tagPose);
+                    Logger.recordOutput("PathfindSelectedMap", "blueRight");
                 }
             }
         } else {
@@ -455,6 +512,7 @@ public class AIRobotInSimulation extends SubsystemBase {
         }
 
         tagPose = fieldLayout.getTagPose(target).orElse(new Pose3d()).toPose2d();
+        Logger.recordOutput("PathfindPose2d", tagPose);
         PathConstraints constraints =
                 new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
         Translation2d translate = selectedMap.get(target);
@@ -488,3 +546,5 @@ public class AIRobotInSimulation extends SubsystemBase {
         return pathfindingCommand;
     }
 }
+
+// Really close to AI bots, just need to fix some subsystem locks.
