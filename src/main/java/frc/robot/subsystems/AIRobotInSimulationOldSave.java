@@ -40,7 +40,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.RobotModeTriggers;
@@ -92,18 +91,13 @@ public class AIRobotInSimulation extends SubsystemBase {
     private final boolean isOpponent;
     private final DriverStation.Alliance alliance;
     public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
-    // Moved chooser to be an instance field
-    private final SendableChooser<Command> behaviorChooser = new SendableChooser<>();
-    private Command infiniteAutoCycleCommand = Commands.none();
-
-    // Moved chooser to be an instance field (already done)
 
     public AIRobotInSimulation(int id, boolean isOpponent, DriverStation.Alliance alliance) {
         this.id = id;
         this.isOpponent = isOpponent;
         this.queeningPose = ROBOT_QUEENING_POSITIONS[id];
         this.startingPose = ROBOTS_STARTING_POSITIONS[id];
-        this.driveSimulation = new SwerveDriveSimulation(DriveConstants.mapleSimConfig, queeningPose);
+        this.driveSimulation = new SwerveDriveSimulation(mapleSimConfig, queeningPose);
         this.intake = new IntakeIOSim(driveSimulation);
         this.alliance = alliance;
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
@@ -143,21 +137,19 @@ public class AIRobotInSimulation extends SubsystemBase {
 
     public void buildBehaviorChooser(Command autoCycle) {
         try {
+
+            SendableChooser<Command> behaviorChooser = new SendableChooser<>();
             final Supplier<Command> disable =
                     () -> Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.queeningPose), this)
                             .andThen(Commands.runOnce(() -> driveSimulation.setRobotSpeeds(new ChassisSpeeds())))
                             .ignoringDisable(true);
-
-            // 1. CREATE the infinite auto cycle command for this specific robot
-            this.infiniteAutoCycleCommand = Commands.runOnce(
-                            () -> driveSimulation.setSimulationWorldPose(this.startingPose), this)
-                    .andThen(this.reCallCommandDefer().repeatedly());
-
+            PathConstraints constraints =
+                    new PathConstraints(3.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
             behaviorChooser.setDefaultOption("Disable", disable.get());
-
-            // 2. ADD the command to the chooser, using the stored reference
-            behaviorChooser.addOption("Auto Cycle", infiniteAutoCycleCommand);
-
+            behaviorChooser.addOption(
+                    "Auto Cycle",
+                    Commands.runOnce(() -> driveSimulation.setSimulationWorldPose(this.startingPose), this)
+                            .andThen(this.reCallCommandDefer().repeatedly()));
             behaviorChooser.onChange((Command::schedule));
             RobotModeTriggers.teleop()
                     .onTrue(Commands.runOnce(() -> behaviorChooser.getSelected().schedule()));
@@ -170,15 +162,6 @@ public class AIRobotInSimulation extends SubsystemBase {
             DriverStation.reportError("Failed to set behavior", true);
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * Retrieves the Auto Cycle command configured in the behavior chooser. This is used to build the main parallel
-     * command group.
-     */
-    public Command getAutoCycleCommand() {
-        // FIX: Return the stored reference directly
-        return this.infiniteAutoCycleCommand;
     }
 
     public void runVelocity(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
@@ -197,9 +180,6 @@ public class AIRobotInSimulation extends SubsystemBase {
 
     public static AIRobotInSimulation[] instances = new AIRobotInSimulation[5];
 
-    // Static field to hold the single command that starts all auto cycles concurrently
-    public static Command allRobotsAutoCycleCommand = Commands.none();
-
     public static void startOpponentRobotSimulations() {
         try {
             Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
@@ -215,37 +195,131 @@ public class AIRobotInSimulation extends SubsystemBase {
 
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false, alliance.get());
+            // Command botCommand = new SequentialCommandGroup(
+            //         instances[0].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[0].intake.intakeCoralStation()),
+            //         pathfindToRandomPose(alliance, instances[0]),
+            //         pathfindingCommand(
+            //                 instances[0].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 alliance,
+            //                 instances[0]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[0].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[0].intake.launchCoralLevel4();
+            //             }
+            //         }));
             instances[0].buildBehaviorChooser(Commands.none());
+
             instances[1] = new AIRobotInSimulation(4, false, alliance.get());
+            // botCommand = new SequentialCommandGroup(
+            //         instances[1].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[1].intake.intakeCoralStation()),
+            //         CMD_PathfindCloseReefAlign.pathfindToRandomPose(alliance, instances[1]),
+            //         CMD_PathfindCloseReefAlign.pathfindingCommand(
+            //                 instances[1].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 alliance,
+            //                 instances[1]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[1].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[1].intake.launchCoralLevel4();
+            //             }
+            //         }));
             instances[1].buildBehaviorChooser(Commands.none());
 
-            // Opponents
+            // // Opponents
             // instances[2] = new AIRobotInSimulation(0, true, OpAlliance.get());
-            // instances[2].buildBehaviorChooser(Commands.none());
+            // botCommand = new SequentialCommandGroup(
+            //         instances[2].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[2].intake.intakeCoralStation()),
+            //         CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance, instances[2]),
+            //         CMD_PathfindCloseReefAlign.pathfindingCommand(
+            //                 instances[2].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 OpAlliance,
+            //                 instances[2]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[2].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[2].intake.launchCoralLevel4();
+            //             }
+            //         }));
+            // instances[2].buildBehaviorChooser(botCommand);
+
             // instances[3] = new AIRobotInSimulation(1, true, OpAlliance.get());
-            // instances[3].buildBehaviorChooser(Commands.none());
+            // botCommand = new SequentialCommandGroup(
+            //         instances[3].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[3].intake.intakeCoralStation()),
+            //         CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance, instances[3]),
+            //         CMD_PathfindCloseReefAlign.pathfindingCommand(
+            //                 instances[3].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 OpAlliance,
+            //                 instances[3]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[3].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[3].intake.launchCoralLevel4();
+            //             }
+            //         }));
+            // instances[3].buildBehaviorChooser(botCommand);
+
             // instances[4] = new AIRobotInSimulation(2, true, OpAlliance.get());
-            // instances[4].buildBehaviorChooser(Commands.none());
-
-            // FIX: Collect all individual auto cycle commands and run them in parallel.
-            // This is the command you need to schedule on robot initialization.
-
-            allRobotsAutoCycleCommand = Commands.parallel(
-                    Commands.deferredProxy(() -> instances[0].getAutoCycleCommand()),
-                    Commands.deferredProxy(() -> instances[1].getAutoCycleCommand()) // ,
-                    // instances[2].getAutoCycleCommand(),
-                    // instances[3].getAutoCycleCommand(),
-                    // instances[4].getAutoCycleCommand()
-                    );
-
-            // Schedule the parallel command now so all robot cycles start concurrently
-            allRobotsAutoCycleCommand.schedule();
+            // botCommand = new SequentialCommandGroup(
+            //         instances[4].PFThenFollowPath(
+            //                 random.nextDouble() < 0.5 ? rightFeederStation : leftFeederStation, constraints),
+            //         Commands.runOnce(() -> instances[4].intake.intakeCoralStation()),
+            //         CMD_PathfindCloseReefAlign.pathfindToRandomPose(OpAlliance, instances[4]),
+            //         CMD_PathfindCloseReefAlign.pathfindingCommand(
+            //                 instances[4].driveSimulation.getSimulatedDriveTrainPose(),
+            //                 random.nextDouble() < 0.5,
+            //                 OpAlliance,
+            //                 instances[4]),
+            //         Commands.runOnce(() -> {
+            //             if (random.nextDouble() < 0.5) {
+            //                 instances[4].intake.launchCoralLevel3();
+            //             } else {
+            //                 instances[4].intake.launchCoralLevel4();
+            //             }
+            //         }));
+            // instances[4].buildBehaviorChooser(botCommand);
 
         } catch (Exception e) {
             DriverStation.reportError(
                     "Failed to load opponent robot simulation paths, error: " + e.getMessage(), false);
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean isRedAlliance() {
+        // return this.isOpponent;
+        return false;
+    }
+
+    public static Pose2d[] getOpponentRobotPoses() {
+        return new Pose2d[] {
+            // instances[2].driveSimulation.getSimulatedDriveTrainPose(),
+            // instances[3].driveSimulation.getSimulatedDriveTrainPose(),
+            // instances[4].driveSimulation.getSimulatedDriveTrainPose()
+        };
+    }
+
+    public static Pose2d[] getAlliancePartnerRobotPoses() {
+        return new Pose2d[] {
+            instances[0].driveSimulation.getSimulatedDriveTrainPose(),
+            instances[1].driveSimulation.getSimulatedDriveTrainPose()
+        };
     }
 
     public Command PFThenFollowPath(PathPlannerPath path, PathConstraints constraints) {
@@ -270,11 +344,6 @@ public class AIRobotInSimulation extends SubsystemBase {
                 this::isRedAlliance,
                 this);
         // return new PathfindThenFollowPath()
-    }
-
-    public boolean isRedAlliance() {
-        // return this.isOpponent;
-        return false;
     }
 
     public Command PFToPose(Pose2d pose, PathConstraints constraints) {
@@ -472,19 +541,6 @@ public class AIRobotInSimulation extends SubsystemBase {
         }
         return pathfindingCommand;
     }
-
-    public static Pose2d[] getOpponentRobotPoses() {
-        return new Pose2d[] {
-            // instances[2].driveSimulation.getSimulatedDriveTrainPose(),
-            // instances[3].driveSimulation.getSimulatedDriveTrainPose(),
-            // instances[4].driveSimulation.getSimulatedDriveTrainPose()
-        };
-    }
-
-    public static Pose2d[] getAlliancePartnerRobotPoses() {
-        return new Pose2d[] {
-            instances[0].driveSimulation.getSimulatedDriveTrainPose(),
-            instances[1].driveSimulation.getSimulatedDriveTrainPose()
-        };
-    }
 }
+
+// Really close to AI bots, just need to fix some subsystem locks.
