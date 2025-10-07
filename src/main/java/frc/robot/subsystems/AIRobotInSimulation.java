@@ -114,7 +114,7 @@ public class AIRobotInSimulation extends SubsystemBase {
             PathPlannerPath leftFeederStation = PathPlannerPath.fromPathFile("Left Feeder Station");
             PathPlannerPath rightFeederStation = PathPlannerPath.fromPathFile("Right Feeder Station");
             PathConstraints constraints =
-                    new PathConstraints(1.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
+                    new PathConstraints(5.0, 2.1, Units.degreesToRadians(540), Units.degreesToRadians(720));
             double random1 = random.nextDouble();
             double random2 = random.nextDouble();
             return new SequentialCommandGroup(
@@ -216,8 +216,8 @@ public class AIRobotInSimulation extends SubsystemBase {
             // Teammates
             instances[0] = new AIRobotInSimulation(3, false, alliance.get());
             instances[0].buildBehaviorChooser(Commands.none());
-            instances[1] = new AIRobotInSimulation(4, false, alliance.get());
-            instances[1].buildBehaviorChooser(Commands.none());
+            // instances[1] = new AIRobotInSimulation(4, false, alliance.get());
+            // instances[1].buildBehaviorChooser(Commands.none());
 
             // Opponents
             // instances[2] = new AIRobotInSimulation(0, true, OpAlliance.get());
@@ -231,8 +231,8 @@ public class AIRobotInSimulation extends SubsystemBase {
             // This is the command you need to schedule on robot initialization.
 
             allRobotsAutoCycleCommand = Commands.parallel(
-                    Commands.deferredProxy(() -> instances[0].getAutoCycleCommand()),
-                    Commands.deferredProxy(() -> instances[1].getAutoCycleCommand()) // ,
+                    Commands.deferredProxy(() -> instances[0].getAutoCycleCommand()) // ,
+                    // Commands.deferredProxy(() -> instances[1].getAutoCycleCommand()) // ,
                     // instances[2].getAutoCycleCommand(),
                     // instances[3].getAutoCycleCommand(),
                     // instances[4].getAutoCycleCommand()
@@ -484,7 +484,7 @@ public class AIRobotInSimulation extends SubsystemBase {
     public static Pose2d[] getAlliancePartnerRobotPoses() {
         return new Pose2d[] {
             instances[0].driveSimulation.getSimulatedDriveTrainPose(),
-            instances[1].driveSimulation.getSimulatedDriveTrainPose()
+            // instances[1].driveSimulation.getSimulatedDriveTrainPose()
         };
     }
 }
